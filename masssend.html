@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Mass Transfer Token</title>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.min.js"></script>
+</head>
+<body>
+  <h2>Mass Transfer Token</h2>
+
+  <label>Token Contract Address:</label><br>
+  <input type="text" id="tokenAddress" size="60"><br><br>
+
+  <label>Recipients (comma-separated):</label><br>
+  <textarea id="recipients" rows="5" cols="60"></textarea><br><br>
+
+  <label>Amounts (comma-separated, dalam token):</label><br>
+  <textarea id="amounts" rows="5" cols="60"></textarea><br><br>
+
+  <button onclick="massTransfer()">🚀 Mass Transfer</button>
+
+  <p id="status"></p>
+
+  <script>
+    const abi = [
+      "function massTransfer(address[] calldata _recipients, uint256[] calldata _amounts) public returns (bool)",
+      "function decimals() public view returns (uint8)"
+    ];
+
+    async function massTransfer() {
+      const provider = new ethers.providers.Web3Provider(window.ethereum);
+      await provider.send("eth_requestAccounts", []);
+      const signer = provider.getSigner();
+
+      const tokenAddress = document.getElementById("tokenAddress").value;
+      const contract = new ethers.Contract(tokenAddress, abi, signer);
+
+      const recipients = document.getElementById("recipients").value.split(",").map(s => s.trim());
+      const amountsRaw = document.getElementById("amounts").value.split(",").map(s => s.trim());
+
+      const decimals = await contract.decimals();
+      const amounts = amountsRaw.map(a => ethers.utils.parseUnits(a, decimals));
+
+      try {
+        const tx = await contract.massTransfer(recipients, amounts);
+        document.getElementById("status").innerText = "Transaction sent: " + tx.hash;
+        await tx.wait();
+        document.getElementById("status").innerText = "✅ Success! Tx Hash: " + tx.hash;
+      } catch (e) {
+        document.getElementById("status").innerText = "❌ Error: " + e.message;
+      }
+    }
+  </script>
+</body>
+</html>
