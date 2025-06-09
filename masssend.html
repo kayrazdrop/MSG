@@ -1,11 +1,13 @@
-<!DOCTYPE html><html lang="en">
+<!DOCTYPE html>
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Mass Transfer Token (0G Labs - Testnet)</title>
+  <!-- ✅ Load Ethers.js FIRST -->
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.min.js"></script>
-  <script src="https://unpkg.com/web3modal@1.9.12/dist/index.js"></script>
   <script src="https://unpkg.com/@walletconnect/web3-provider@1.8.0/dist/umd/index.min.js"></script>
+  <script src="https://unpkg.com/web3modal@1.9.12/dist/index.js"></script>
   <style>
     body {
       background-color: #121212;
@@ -47,11 +49,22 @@
 </head>
 <body>
   <h2>Mass Transfer Token (0G Labs - Testnet)</h2>
-  <button onclick="connectWallet()">🔌 Connect Wallet</button>
-  <p id="walletAddress">Wallet: <i>Not connected</i></p>  <input type="text" id="tokenAddress" placeholder="Token Contract Address">  <textarea id="recipients" rows="4" placeholder="Recipients (comma-separated)"></textarea>  <div class="or">or</div>
-  <textarea id="amounts" rows="4" placeholder="Amounts (comma-separated, in tokens)"></textarea>  <input type="file" id="csvFile" accept=".csv" onchange="handleCSV(event)"><button onclick="massTransfer()">🚀 Mass Transfer</button>
 
-  <p id="status"></p>  <script>
+  <button onclick="connectWallet()">🔌 Connect Wallet</button>
+  <p id="walletAddress">Wallet: <i>Not connected</i></p>
+
+  <input type="text" id="tokenAddress" placeholder="Token Contract Address" />
+
+  <textarea id="recipients" rows="4" placeholder="Recipients (comma-separated)"></textarea>
+  <div class="or">or</div>
+  <textarea id="amounts" rows="4" placeholder="Amounts (comma-separated, in tokens)"></textarea>
+
+  <input type="file" id="csvFile" accept=".csv" onchange="handleCSV(event)" />
+
+  <button onclick="massTransfer()">🚀 Mass Transfer</button>
+  <p id="status"></p>
+
+  <script>
     let provider, signer, web3Modal, instance;
     let recipients = [], amounts = [];
 
@@ -78,6 +91,11 @@
     });
 
     async function connectWallet() {
+      if (typeof ethers === 'undefined') {
+        alert("❌ Ethers.js failed to load. Check your internet connection or script loading.");
+        return;
+      }
+
       try {
         instance = await web3Modal.connect();
         provider = new ethers.providers.Web3Provider(instance);
@@ -93,7 +111,7 @@
       const file = event.target.files[0];
       const reader = new FileReader();
       reader.onload = (e) => {
-        const lines = e.target.result.split('\n');
+        const lines = e.target.result.split('\\n');
         recipients = [];
         amounts = [];
         lines.forEach(line => {
@@ -141,5 +159,6 @@
         document.getElementById("status").innerText = "❌ Error: " + e.message;
       }
     }
-  </script></body>
+  </script>
+</body>
 </html>
