@@ -1,0 +1,164 @@
+<!DOCTYPE html><html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Mass Transfer Token (0G Labs - Testnet)</title>
+  <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+  <script src="https://unpkg.com/@walletconnect/ethereum-provider@2.9.2/dist/index.umd.js"></script>
+  <script src="https://unpkg.com/@web3modal/standalone@2.4.2/dist/index.umd.js"></script>
+  <style>
+    body {
+      background-color: #121212;
+      color: #f0f0f0;
+      font-family: sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem;
+    }
+    input, textarea, button {
+      width: 100%;
+      max-width: 600px;
+      margin: 0.5rem 0;
+      padding: 0.6rem;
+      border-radius: 8px;
+      border: none;
+    }
+    button {
+      background-color: #2e2e2e;
+      color: #fff;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    button:hover {
+      background-color: #444;
+    }
+    #status {
+      margin-top: 1rem;
+      max-width: 600px;
+      word-break: break-word;
+    }
+    .or {
+      text-align: center;
+      margin: 1rem 0 0.5rem;
+      opacity: 0.7;
+    }
+  </style>
+</head>
+<body>
+  <h2>Mass Transfer Token (0G Labs - Testnet)</h2><button onclick="connectWallet()">🔌 Connect Wallet</button>
+
+  <p id="walletAddress">Wallet: <i>Not connected</i></p>  <input type="text" id="tokenAddress" placeholder="Token Contract Address" />
+  <textarea id="recipients" rows="4" placeholder="Recipients (comma-separated)"></textarea>
+  <div class="or">or</div>
+  <textarea id="amounts" rows="4" placeholder="Amounts (comma-separated, in tokens)"></textarea>
+  <input type="file" id="csvFile" accept=".csv" onchange="handleCSV(event)" /><button onclick="massTransfer()">🚀 Mass Transfer</button>
+
+  <p id="status"></p>  <script>
+    let provider, signer, ethereumProvider;
+    let recipients = [], amounts = [];
+
+    const abi = [
+      "function massTransfer(address[] calldata _recipients, uint256[] calldata _amounts) public returns (bool)",
+      "function decimals() public view returns (uint8)"
+    ];
+
+    const projectId = "1be5e259c2a19d69d8a5424cc7f32c59"; // demo project ID
+
+    const metadata = {
+      name: "MassTransferDApp",
+      description: "Token distribution tool",
+      url: "https://kayrazdrop.github.io",
+      icons: ["https://walletconnect.com/walletconnect-logo.svg"]
+    };
+
+    const modal = window.Web3Modal.default({
+      projectId,
+      walletConnectVersion: 2,
+      chains: [
+        {
+          chainId: 16601,
+          name: "0G Testnet",
+          rpcUrl: "https://rpc.0g.ai"
+        }
+      ]
+    });
+
+    async function connectWallet() {
+      try {
+        ethereumProvider = await window.WalletConnectEthereumProvider.init({
+          projectId,
+          chains: [16601],
+          rpcMap: {
+            16601: "https://rpc.0g.ai"
+          },
+          showQrModal: true,
+          metadata
+        });
+
+        await ethereumProvider.enable();
+        provider = new ethers.providers.Web3Provider(ethereumProvider);
+        signer = provider.getSigner();
+
+        const address = await signer.getAddress();
+        document.getElementById("walletAddress").innerText = "✅ Wallet: " + address;
+      } catch (e) {
+        alert("❌ Wallet connection failed: " + e.message);
+      }
+    }
+
+    function handleCSV(event) {
+      const file = event.target.files[0];
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const text = e.target.result.replace(/\r\n|\r|\n/g, '\n');
+        const lines = text.split('\n');
+        recipients = [];
+        amounts = [];
+        lines.forEach(line => {
+          const [addr, amt] = line.split(',');
+          if (ethers.utils.isAddress(addr?.trim()) && !isNaN(parseFloat(amt))) {
+            recipients.push(addr.trim());
+            amounts.push(amt.trim());
+          }
+        });
+        document.getElementById("recipients").value = recipients.join(',');
+        document.getElementById("amounts").value = amounts.join(',');
+      };
+      reader.readAsText(file);
+    }
+
+    async function massTransfer() {
+      if (!signer) {
+        alert('⚠️ Please connect your wallet first.');
+        return;
+      }
+
+      const tokenAddress = document.getElementById("tokenAddress").value;
+      if (!ethers.utils.isAddress(tokenAddress)) {
+        alert("❌ Invalid token contract address");
+        return;
+      }
+
+      recipients = document.getElementById("recipients").value.split(',').map(s => s.trim());
+      amounts = document.getElementById("amounts").value.split(',').map(s => s.trim());
+
+      if (recipients.length !== amounts.length || recipients.length === 0) {
+        alert("❌ Recipients and amounts must match and not be empty");
+        return;
+      }
+
+      try {
+        const contract = new ethers.Contract(tokenAddress, abi, signer);
+        const decimals = await contract.decimals();
+        const parsedAmounts = amounts.map(a => ethers.utils.parseUnits(a, decimals));
+        const tx = await contract.massTransfer(recipients, parsedAmounts);
+        document.getElementById("status").innerText = "⏳ Transaction sent: " + tx.hash;
+        await tx.wait();
+        document.getElementById("status").innerText = "✅ Success! Tx Hash: " + tx.hash;
+      } catch (e) {
+        document.getElementById("status").innerText = "❌ Error: " + e.message;
+      }
+    }
+  </script></body>
+</html>
