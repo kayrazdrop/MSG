@@ -3,9 +3,11 @@
 <head>
   <title>Mass Transfer Token</title>
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.min.js"></script>
+  <script src="https://unpkg.com/web3modal@1.9.12/dist/index.js"></script>
+  <script src="https://unpkg.com/@walletconnect/web3-provider@1.8.0/dist/umd/index.min.js"></script>
 </head>
 <body>
-  <h2>Mass Transfer Token</h2>
+  <h2>Mass Transfer Token (0G Labs - Testnet)</h2>
 
   <button onclick="connectWallet()">🔌 Connect Wallet</button>
   <p id="walletAddress">Wallet: <i>Not connected</i></p>
@@ -26,23 +28,42 @@
   <script>
     let provider;
     let signer;
+    let web3Modal;
+    let instance;
 
     const abi = [
       "function massTransfer(address[] calldata _recipients, uint256[] calldata _amounts) public returns (bool)",
       "function decimals() public view returns (uint8)"
     ];
 
-    async function connectWallet() {
-      if (typeof window.ethereum === 'undefined') {
-        alert('MetaMask / Web3 wallet not detected!');
-        return;
+    // Set provider options for Web3Modal (0G Labs Testnet)
+    const providerOptions = {
+      walletconnect: {
+        package: window.WalletConnectProvider.default,
+        options: {
+          rpc: {
+            16601: "https://rpc.0g.ai" // 0G Labs Testnet
+          },
+          chainId: 16601
+        }
       }
+    };
 
-      provider = new ethers.providers.Web3Provider(window.ethereum);
-      await provider.send("eth_requestAccounts", []);
-      signer = provider.getSigner();
-      const address = await signer.getAddress();
-      document.getElementById("walletAddress").innerText = "Wallet: " + address;
+    web3Modal = new window.Web3Modal.default({
+      cacheProvider: false,
+      providerOptions
+    });
+
+    async function connectWallet() {
+      try {
+        instance = await web3Modal.connect();
+        provider = new ethers.providers.Web3Provider(instance);
+        signer = provider.getSigner();
+        const address = await signer.getAddress();
+        document.getElementById("walletAddress").innerText = "✅ Wallet: " + address;
+      } catch (e) {
+        alert("❌ Wallet connection failed: " + e.message);
+      }
     }
 
     async function massTransfer() {
