@@ -112,24 +112,25 @@
     }
 
     function handleCSV(event) {
-      const file = event.target.files[0];
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        const lines = e.target.result.split('\\n');
-        recipients = [];
-        amounts = [];
-        lines.forEach(line => {
-          const [addr, amt] = line.split(',');
-          if (ethers.utils.isAddress(addr.trim()) && !isNaN(parseFloat(amt))) {
-            recipients.push(addr.trim());
-            amounts.push(amt.trim());
-          }
-        });
-        document.getElementById("recipients").value = recipients.join(',');
-        document.getElementById("amounts").value = amounts.join(',');
-      };
-      reader.readAsText(file);
-    }
+  const file = event.target.files[0];
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    const text = e.target.result.replace(/\r\n|\r|\n/g, '\n'); // 🛠 normalize newlines
+    const lines = text.split('\n');
+    recipients = [];
+    amounts = [];
+    lines.forEach(line => {
+      const [addr, amt] = line.split(',');
+      if (ethers.utils.isAddress(addr?.trim()) && !isNaN(parseFloat(amt))) {
+        recipients.push(addr.trim());
+        amounts.push(amt.trim());
+      }
+    });
+    document.getElementById("recipients").value = recipients.join(',');
+    document.getElementById("amounts").value = amounts.join(',');
+  };
+  reader.readAsText(file);
+}
 
     async function massTransfer() {
       if (!signer) {
