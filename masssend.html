@@ -1,48 +1,71 @@
-<!DOCTYPE html>
-<html>
+<!DOCTYPE html><html lang="en">
 <head>
-  <title>Mass Transfer Token</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Mass Transfer Token (0G Labs - Testnet)</title>
   <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.min.js"></script>
   <script src="https://unpkg.com/web3modal@1.9.12/dist/index.js"></script>
   <script src="https://unpkg.com/@walletconnect/web3-provider@1.8.0/dist/umd/index.min.js"></script>
+  <style>
+    body {
+      background-color: #121212;
+      color: #f0f0f0;
+      font-family: sans-serif;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 2rem;
+    }
+    input, textarea, button {
+      width: 100%;
+      max-width: 600px;
+      margin: 0.5rem 0;
+      padding: 0.6rem;
+      border-radius: 8px;
+      border: none;
+    }
+    button {
+      background-color: #2e2e2e;
+      color: #fff;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    button:hover {
+      background-color: #444;
+    }
+    #status {
+      margin-top: 1rem;
+      max-width: 600px;
+      word-break: break-word;
+    }
+    .or {
+      text-align: center;
+      margin: 1rem 0 0.5rem;
+      opacity: 0.7;
+    }
+  </style>
 </head>
 <body>
   <h2>Mass Transfer Token (0G Labs - Testnet)</h2>
-
   <button onclick="connectWallet()">🔌 Connect Wallet</button>
-  <p id="walletAddress">Wallet: <i>Not connected</i></p>
+  <p id="walletAddress">Wallet: <i>Not connected</i></p>  <input type="text" id="tokenAddress" placeholder="Token Contract Address">  <textarea id="recipients" rows="4" placeholder="Recipients (comma-separated)"></textarea>  <div class="or">or</div>
+  <textarea id="amounts" rows="4" placeholder="Amounts (comma-separated, in tokens)"></textarea>  <input type="file" id="csvFile" accept=".csv" onchange="handleCSV(event)"><button onclick="massTransfer()">🚀 Mass Transfer</button>
 
-  <label>Token Contract Address:</label><br>
-  <input type="text" id="tokenAddress" size="60"><br><br>
-
-  <label>Recipients (comma-separated):</label><br>
-  <textarea id="recipients" rows="5" cols="60"></textarea><br><br>
-
-  <label>Amounts (comma-separated, dalam token):</label><br>
-  <textarea id="amounts" rows="5" cols="60"></textarea><br><br>
-
-  <button onclick="massTransfer()">🚀 Mass Transfer</button>
-
-  <p id="status"></p>
-
-  <script>
-    let provider;
-    let signer;
-    let web3Modal;
-    let instance;
+  <p id="status"></p>  <script>
+    let provider, signer, web3Modal, instance;
+    let recipients = [], amounts = [];
 
     const abi = [
       "function massTransfer(address[] calldata _recipients, uint256[] calldata _amounts) public returns (bool)",
       "function decimals() public view returns (uint8)"
     ];
 
-    // Set provider options for Web3Modal (0G Labs Testnet)
     const providerOptions = {
       walletconnect: {
         package: window.WalletConnectProvider.default,
         options: {
           rpc: {
-            16601: "https://rpc.0g.ai" // 0G Labs Testnet
+            16601: "https://rpc.0g.ai"
           },
           chainId: 16601
         }
@@ -66,6 +89,26 @@
       }
     }
 
+    function handleCSV(event) {
+      const file = event.target.files[0];
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const lines = e.target.result.split('\n');
+        recipients = [];
+        amounts = [];
+        lines.forEach(line => {
+          const [addr, amt] = line.split(',');
+          if (ethers.utils.isAddress(addr.trim()) && !isNaN(parseFloat(amt))) {
+            recipients.push(addr.trim());
+            amounts.push(amt.trim());
+          }
+        });
+        document.getElementById("recipients").value = recipients.join(',');
+        document.getElementById("amounts").value = amounts.join(',');
+      };
+      reader.readAsText(file);
+    }
+
     async function massTransfer() {
       if (!signer) {
         alert('⚠️ Please connect your wallet first.');
@@ -73,16 +116,24 @@
       }
 
       const tokenAddress = document.getElementById("tokenAddress").value;
-      const contract = new ethers.Contract(tokenAddress, abi, signer);
+      if (!ethers.utils.isAddress(tokenAddress)) {
+        alert("❌ Invalid token contract address");
+        return;
+      }
 
-      const recipients = document.getElementById("recipients").value.split(",").map(s => s.trim());
-      const amountsRaw = document.getElementById("amounts").value.split(",").map(s => s.trim());
+      recipients = document.getElementById("recipients").value.split(',').map(s => s.trim());
+      amounts = document.getElementById("amounts").value.split(',').map(s => s.trim());
+
+      if (recipients.length !== amounts.length || recipients.length === 0) {
+        alert("❌ Recipients and amounts must match and not be empty");
+        return;
+      }
 
       try {
+        const contract = new ethers.Contract(tokenAddress, abi, signer);
         const decimals = await contract.decimals();
-        const amounts = amountsRaw.map(a => ethers.utils.parseUnits(a, decimals));
-
-        const tx = await contract.massTransfer(recipients, amounts);
+        const parsedAmounts = amounts.map(a => ethers.utils.parseUnits(a, decimals));
+        const tx = await contract.massTransfer(recipients, parsedAmounts);
         document.getElementById("status").innerText = "⏳ Transaction sent: " + tx.hash;
         await tx.wait();
         document.getElementById("status").innerText = "✅ Success! Tx Hash: " + tx.hash;
@@ -90,6 +141,5 @@
         document.getElementById("status").innerText = "❌ Error: " + e.message;
       }
     }
-  </script>
-</body>
+  </script></body>
 </html>
