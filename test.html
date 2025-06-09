@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="en">
+<!DOCTYPE html>
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
@@ -46,15 +47,21 @@
   </style>
 </head>
 <body>
-  <h2>Mass Transfer Token (0G Labs - Testnet)</h2><button onclick="connectWallet()">🔌 Connect Wallet</button>
+  <h2>Mass Transfer Token (0G Labs - Testnet)</h2>
 
-  <p id="walletAddress">Wallet: <i>Not connected</i></p>  <input type="text" id="tokenAddress" placeholder="Token Contract Address" />
+  <button onclick="connectWallet()">🔌 Connect Wallet</button>
+  <p id="walletAddress">Wallet: <i>Not connected</i></p>
+
+  <input type="text" id="tokenAddress" placeholder="Token Contract Address" />
   <textarea id="recipients" rows="4" placeholder="Recipients (comma-separated)"></textarea>
   <div class="or">or</div>
   <textarea id="amounts" rows="4" placeholder="Amounts (comma-separated, in tokens)"></textarea>
-  <input type="file" id="csvFile" accept=".csv" onchange="handleCSV(event)" /><button onclick="massTransfer()">🚀 Mass Transfer</button>
+  <input type="file" id="csvFile" accept=".csv" onchange="handleCSV(event)" />
 
-  <p id="status"></p>  <script>
+  <button onclick="massTransfer()">🚀 Mass Transfer</button>
+  <p id="status"></p>
+
+  <script>
     let provider, signer, ethereumProvider;
     let recipients = [], amounts = [];
 
@@ -63,7 +70,7 @@
       "function decimals() public view returns (uint8)"
     ];
 
-    const projectId = "1be5e259c2a19d69d8a5424cc7f32c59"; // demo project ID
+    const projectId = "1be5e259c2a19d69d8a5424cc7f32c59"; // demo
 
     const metadata = {
       name: "MassTransferDApp",
@@ -72,21 +79,11 @@
       icons: ["https://walletconnect.com/walletconnect-logo.svg"]
     };
 
-    const modal = window.Web3Modal.default({
-      projectId,
-      walletConnectVersion: 2,
-      chains: [
-        {
-          chainId: 16601,
-          name: "0G Testnet",
-          rpcUrl: "https://rpc.0g.ai"
-        }
-      ]
-    });
-
     async function connectWallet() {
       try {
-        ethereumProvider = await window.WalletConnectEthereumProvider.init({
+        const WCProvider = window.WalletConnectEthereumProvider?.default || window.WalletConnectEthereumProvider;
+
+        ethereumProvider = await WCProvider.init({
           projectId,
           chains: [16601],
           rpcMap: {
@@ -160,5 +157,6 @@
         document.getElementById("status").innerText = "❌ Error: " + e.message;
       }
     }
-  </script></body>
+  </script>
+</body>
 </html>
