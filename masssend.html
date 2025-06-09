@@ -7,6 +7,9 @@
 <body>
   <h2>Mass Transfer Token</h2>
 
+  <button onclick="connectWallet()">🔌 Connect Wallet</button>
+  <p id="walletAddress">Wallet: <i>Not connected</i></p>
+
   <label>Token Contract Address:</label><br>
   <input type="text" id="tokenAddress" size="60"><br><br>
 
@@ -21,15 +24,32 @@
   <p id="status"></p>
 
   <script>
+    let provider;
+    let signer;
+
     const abi = [
       "function massTransfer(address[] calldata _recipients, uint256[] calldata _amounts) public returns (bool)",
       "function decimals() public view returns (uint8)"
     ];
 
-    async function massTransfer() {
-      const provider = new ethers.providers.Web3Provider(window.ethereum);
+    async function connectWallet() {
+      if (typeof window.ethereum === 'undefined') {
+        alert('MetaMask / Web3 wallet not detected!');
+        return;
+      }
+
+      provider = new ethers.providers.Web3Provider(window.ethereum);
       await provider.send("eth_requestAccounts", []);
-      const signer = provider.getSigner();
+      signer = provider.getSigner();
+      const address = await signer.getAddress();
+      document.getElementById("walletAddress").innerText = "Wallet: " + address;
+    }
+
+    async function massTransfer() {
+      if (!signer) {
+        alert('⚠️ Please connect your wallet first.');
+        return;
+      }
 
       const tokenAddress = document.getElementById("tokenAddress").value;
       const contract = new ethers.Contract(tokenAddress, abi, signer);
@@ -37,12 +57,12 @@
       const recipients = document.getElementById("recipients").value.split(",").map(s => s.trim());
       const amountsRaw = document.getElementById("amounts").value.split(",").map(s => s.trim());
 
-      const decimals = await contract.decimals();
-      const amounts = amountsRaw.map(a => ethers.utils.parseUnits(a, decimals));
-
       try {
+        const decimals = await contract.decimals();
+        const amounts = amountsRaw.map(a => ethers.utils.parseUnits(a, decimals));
+
         const tx = await contract.massTransfer(recipients, amounts);
-        document.getElementById("status").innerText = "Transaction sent: " + tx.hash;
+        document.getElementById("status").innerText = "⏳ Transaction sent: " + tx.hash;
         await tx.wait();
         document.getElementById("status").innerText = "✅ Success! Tx Hash: " + tx.hash;
       } catch (e) {
