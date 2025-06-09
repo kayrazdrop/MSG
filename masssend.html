@@ -91,21 +91,21 @@
     });
 
     async function connectWallet() {
-      if (typeof ethers === 'undefined') {
-        alert("❌ Ethers.js failed to load. Check your internet connection or script loading.");
-        return;
-      }
+  if (typeof window.ethereum === 'undefined') {
+    alert('❌ Wallet not detected. Gunakan MetaMask browser atau Trust Wallet.');
+    return;
+  }
 
-      try {
-        instance = await web3Modal.connect();
-        provider = new ethers.providers.Web3Provider(instance);
-        signer = provider.getSigner();
-        const address = await signer.getAddress();
-        document.getElementById("walletAddress").innerText = "✅ Wallet: " + address;
-      } catch (e) {
-        alert("❌ Wallet connection failed: " + e.message);
-      }
-    }
+  try {
+    provider = new ethers.providers.Web3Provider(window.ethereum);
+    await provider.send("eth_requestAccounts", []);
+    signer = provider.getSigner();
+    const address = await signer.getAddress();
+    document.getElementById("walletAddress").innerText = "✅ Wallet: " + address;
+  } catch (e) {
+    alert("❌ Gagal konek wallet: " + e.message);
+  }
+}
 
     function handleCSV(event) {
       const file = event.target.files[0];
